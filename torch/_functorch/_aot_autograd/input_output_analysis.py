@@ -375,9 +375,7 @@ def compute_overlapping_inputs(fwd_inputs, aliased_input_indices):
                 )
             ):
                 dynamic_shape_indices.add(j_)
-        assert (
-            len(dynamic_shape_indices) == 0
-        ), f"""\
+        err_message = f"""\
 Encountered a graph where:
 - {num_aliases} graph inputs all share the same storage (input indices: {str(aliased_input_indices)})
 - at least one of these aliased inputs was mutated
@@ -397,6 +395,12 @@ torch._dynamo.mark_static(param, 0) # (1, 2, ... for every dimension on the para
 If you are running into this issue in a situation where your parameters are static but some other inputs
 are aliased and mutated, and they should be dynamic, please file an issue.
 """
+        from torch._dynamo.exc import UserError, UserErrorType
+        raise UserError(
+            UserErrorType.UNSUPPORTED_ALIASED_MUTATED_DYNAMIC_INPUTS,
+            err_message,
+            case_name="dynamic_shapes_validation",
+        )
     for j in range(num_aliases):
         for i in range(j):
             j_ = aliased_input_indices[j]
